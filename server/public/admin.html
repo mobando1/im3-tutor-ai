@@ -154,6 +154,21 @@
     .form-row .form-group { flex: 1; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
 
+    /* Source tabs */
+    .source-tabs {
+      display: flex; gap: 4px; margin-bottom: 16px;
+      background: #0f172a; border-radius: 8px; padding: 4px;
+    }
+    .source-tab {
+      flex: 1; padding: 8px 12px; border: none; border-radius: 6px;
+      background: transparent; color: #94a3b8; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .source-tab:hover { color: #e2e8f0; }
+    .source-tab.active { background: #2FA4A9; color: #fff; }
+    .source-panel { min-height: 100px; }
+    .hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+
     /* Upload area */
     .upload-area {
       border: 2px dashed #334155; border-radius: 8px; padding: 24px;
@@ -262,21 +277,55 @@
   </div>
 </div>
 
-<!-- Upload Document Modal -->
+<!-- Add Document Modal (tabs: file, URL, GitHub) -->
 <div id="upload-modal" class="modal-overlay">
   <div class="modal">
-    <h3>Subir Documento</h3>
+    <h3>Agregar Documento</h3>
     <input type="hidden" id="upload-tutor-id">
-    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-      <p>Haz clic para seleccionar un archivo</p>
-      <p class="hint">PDF o archivo de texto (max 20MB)</p>
-      <input type="file" id="file-input" accept=".pdf,.txt,.md" onchange="handleFileSelect(event)">
+
+    <!-- Source Tabs -->
+    <div class="source-tabs">
+      <button class="source-tab active" onclick="switchSourceTab('file')" id="tab-file">Archivo</button>
+      <button class="source-tab" onclick="switchSourceTab('url')" id="tab-url">URL</button>
+      <button class="source-tab" onclick="switchSourceTab('github')" id="tab-github">GitHub</button>
     </div>
-    <div id="selected-file" style="margin-top:12px;font-size:13px;color:#94a3b8"></div>
-    <div id="upload-progress" class="upload-progress">Subiendo y procesando...</div>
+
+    <!-- File Upload -->
+    <div id="source-file" class="source-panel">
+      <div class="upload-area" onclick="document.getElementById('file-input').click()">
+        <p>Haz clic para seleccionar un archivo</p>
+        <p class="hint">PDF o archivo de texto (max 20MB)</p>
+        <input type="file" id="file-input" accept=".pdf,.txt,.md" onchange="handleFileSelect(event)">
+      </div>
+      <div id="selected-file" style="margin-top:12px;font-size:13px;color:#94a3b8"></div>
+    </div>
+
+    <!-- URL Scraping -->
+    <div id="source-url" class="source-panel" style="display:none">
+      <div class="form-group">
+        <label>URL de la pagina web</label>
+        <input type="url" id="f-url" placeholder="https://ejemplo.com/documentacion">
+      </div>
+      <p class="hint" style="margin-top:-8px">Se extrae automaticamente el texto de la pagina</p>
+    </div>
+
+    <!-- GitHub Repo -->
+    <div id="source-github" class="source-panel" style="display:none">
+      <div class="form-group">
+        <label>URL del repositorio</label>
+        <input type="url" id="f-github-url" placeholder="https://github.com/usuario/repo">
+      </div>
+      <div class="form-group">
+        <label>GitHub Token (opcional, para repos privados)</label>
+        <input type="password" id="f-github-token" placeholder="ghp_...">
+      </div>
+      <p class="hint" style="margin-top:-8px">Se analizan README, codigo fuente, documentacion y configuracion del repo</p>
+    </div>
+
+    <div id="upload-progress" class="upload-progress">Procesando...</div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('upload-modal')">Cancelar</button>
-      <button class="btn btn-primary" id="upload-btn" onclick="uploadDocument()" disabled>Subir Documento</button>
+      <button class="btn btn-primary" id="upload-btn" onclick="submitDocument()">Agregar</button>
     </div>
   </div>
 </div>
@@ -288,6 +337,7 @@
 const API_BASE = window.location.origin;
 let apiKey = "";
 let selectedFile = null;
+let currentSourceTab = "file";
 
 // ============================================================
 // Auth
@@ -525,16 +575,28 @@ async function deleteTutor(id, name) {
 }
 
 // ============================================================
-// Upload Document
+// Add Document (file, URL, GitHub)
 // ============================================================
+
+function switchSourceTab(tab) {
+  currentSourceTab = tab;
+  document.querySelectorAll(".source-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  document.querySelectorAll(".source-panel").forEach(p => p.style.display = "none");
+  document.getElementById("source-" + tab).style.display = "block";
+  document.getElementById("upload-btn").disabled = (tab === "file" && !selectedFile);
+}
 
 function openUploadModal(tutorId) {
   document.getElementById("upload-tutor-id").value = tutorId;
   document.getElementById("file-input").value = "";
   document.getElementById("selected-file").textContent = "";
   document.getElementById("upload-progress").style.display = "none";
-  document.getElementById("upload-btn").disabled = true;
+  document.getElementById("f-url").value = "";
+  document.getElementById("f-github-url").value = "";
+  document.getElementById("f-github-token").value = "";
   selectedFile = null;
+  switchSourceTab("file");
   document.getElementById("upload-modal").classList.add("open");
 }
 
@@ -547,8 +609,7 @@ function handleFileSelect(e) {
   document.getElementById("upload-btn").disabled = false;
 }
 
-async function uploadDocument() {
-  if (!selectedFile) return;
+async function submitDocument() {
   const tutorId = document.getElementById("upload-tutor-id").value;
   const progress = document.getElementById("upload-progress");
   const btn = document.getElementById("upload-btn");
@@ -557,27 +618,55 @@ async function uploadDocument() {
   btn.disabled = true;
 
   try {
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+    let res;
 
-    const res = await fetch(API_BASE + "/api/admin/tutors/" + tutorId + "/documents", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + apiKey },
-      body: formData,
-    });
+    if (currentSourceTab === "file") {
+      if (!selectedFile) { showToast("Selecciona un archivo", true); return; }
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      res = await fetch(API_BASE + "/api/admin/tutors/" + tutorId + "/documents", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + apiKey },
+        body: formData,
+      });
+    } else if (currentSourceTab === "url") {
+      const url = document.getElementById("f-url").value.trim();
+      if (!url) { showToast("Ingresa una URL", true); progress.style.display = "none"; btn.disabled = false; return; }
+      progress.textContent = "Extrayendo contenido de la URL...";
+      res = await apiFetch("/api/admin/tutors/" + tutorId + "/documents/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+    } else if (currentSourceTab === "github") {
+      const repoUrl = document.getElementById("f-github-url").value.trim();
+      const githubToken = document.getElementById("f-github-token").value.trim() || undefined;
+      if (!repoUrl) { showToast("Ingresa la URL del repositorio", true); progress.style.display = "none"; btn.disabled = false; return; }
+      progress.textContent = "Analizando repositorio (esto puede tomar un momento)...";
+      res = await apiFetch("/api/admin/tutors/" + tutorId + "/documents/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl, githubToken }),
+      });
+    } else {
+      return;
+    }
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error || "Error");
+      throw new Error(err.error || "Error procesando documento");
     }
 
     const doc = await res.json();
     closeModal("upload-modal");
-    showToast("Documento subido (" + (doc.chunkCount || 0) + " chunks)");
+    const extra = doc.filesProcessed ? " — " + doc.filesProcessed + " archivos" : "";
+    showToast("Documento agregado (" + (doc.chunkCount || 0) + " chunks" + extra + ")");
     loadDocuments(tutorId);
   } catch (err) {
     showToast(err.message, true);
+  } finally {
     progress.style.display = "none";
+    progress.textContent = "Procesando...";
     btn.disabled = false;
   }
 }

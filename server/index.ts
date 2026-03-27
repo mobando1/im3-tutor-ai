@@ -12,6 +12,8 @@ import { adminAuth } from "./auth.js";
 import { uploadDocument, deleteDocument } from "./storage.js";
 import { extractTextFromPdf, chunkText } from "./rag.js";
 import { handleChat } from "./chat.js";
+import { scrapeUrl } from "./scraper.js";
+import { fetchGitHubRepo, formatRepoAsDocument } from "./github.js";
 import {
   tutors,
   tutorDocuments,
@@ -346,6 +348,97 @@ adminRouter.delete("/tutors/:id/documents/:docId", async (req, res) => {
   } catch (err) {
     log(`Error deleting document: ${err}`);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/admin/tutors/:id/documents/url — ingest from URL (scraping)
+adminRouter.post("/tutors/:id/documents/url", async (req, res) => {
+  try {
+    const tutorId = param(req.params.id);
+    const { url } = req.body as { url?: string };
+
+    if (!url) {
+      res.status(400).json({ error: "URL is required" });
+      return;
+    }
+
+    const tutor = await db.query.tutors.findFirst({
+      where: eq(tutors.id, tutorId),
+    });
+    if (!tutor) {
+      res.status(404).json({ error: "Tutor not found" });
+      return;
+    }
+
+    const { title, text } = await scrapeUrl(url);
+    const chunks = chunkText(text);
+
+    const [doc] = await db
+      .insert(tutorDocuments)
+      .values({
+        tutorId,
+        name: title,
+        type: "url",
+        content: text,
+        chunks,
+        originalUrl: url,
+      })
+      .returning();
+
+    log(`URL scraped: ${url} (${chunks.length} chunks) for tutor ${tutorId}`);
+    res.status(201).json({ ...doc, chunkCount: chunks.length });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Scraping failed";
+    log(`Error scraping URL: ${msg}`);
+    res.status(400).json({ error: msg });
+  }
+});
+
+// POST /api/admin/tutors/:id/documents/github — ingest from GitHub repo
+adminRouter.post("/tutors/:id/documents/github", async (req, res) => {
+  try {
+    const tutorId = param(req.params.id);
+    const { repoUrl, githubToken } = req.body as { repoUrl?: string; githubToken?: string };
+
+    if (!repoUrl) {
+      res.status(400).json({ error: "GitHub repository URL is required" });
+      return;
+    }
+
+    const tutor = await db.query.tutors.findFirst({
+      where: eq(tutors.id, tutorId),
+    });
+    if (!tutor) {
+      res.status(404).json({ error: "Tutor not found" });
+      return;
+    }
+
+    const repoContent = await fetchGitHubRepo(repoUrl, githubToken);
+    const fullText = formatRepoAsDocument(repoContent);
+    const chunks = chunkText(fullText);
+
+    const [doc] = await db
+      .insert(tutorDocuments)
+      .values({
+        tutorId,
+        name: `GitHub: ${repoContent.repoName}`,
+        type: "url",
+        content: fullText,
+        chunks,
+        originalUrl: repoUrl,
+      })
+      .returning();
+
+    log(`GitHub repo ingested: ${repoContent.repoName} (${repoContent.files.length} files, ${chunks.length} chunks) for tutor ${tutorId}`);
+    res.status(201).json({
+      ...doc,
+      chunkCount: chunks.length,
+      filesProcessed: repoContent.files.length,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "GitHub ingestion failed";
+    log(`Error ingesting GitHub repo: ${msg}`);
+    res.status(400).json({ error: msg });
   }
 });
 
