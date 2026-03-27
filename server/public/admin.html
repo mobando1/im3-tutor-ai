@@ -432,6 +432,7 @@ function renderTutors(tutors) {
         '<div><div class="tutor-name">' + esc(t.projectName) + '</div>' +
         '<div class="tutor-client">' + esc(t.clientName) + '</div></div>' +
         '<div class="tutor-actions">' +
+          '<button class="btn btn-sm btn-primary" onclick="testWidget(\'' + t.id + '\')">Probar</button>' +
           '<button class="btn btn-sm btn-secondary" onclick="openEditModal(\'' + t.id + '\')">Editar</button>' +
           '<button class="btn btn-sm btn-danger" onclick="deleteTutor(\'' + t.id + '\', \'' + esc(t.projectName) + '\')">Eliminar</button>' +
         '</div>' +
@@ -681,6 +682,29 @@ async function deleteDocument(tutorId, docId, name) {
   } catch {
     showToast("Error eliminando documento", true);
   }
+}
+
+// ============================================================
+// Test Widget (live preview)
+// ============================================================
+
+function testWidget(tutorId) {
+  // Remove any existing test widget
+  const existing = document.getElementById("test-widget-script");
+  if (existing) existing.remove();
+  const existingDiv = document.getElementById("im3-tutor-widget");
+  if (existingDiv) existingDiv.remove();
+
+  // Inject widget script
+  const script = document.createElement("script");
+  script.id = "test-widget-script";
+  script.src = API_BASE + "/widget.js";
+  script.setAttribute("data-tutor", tutorId);
+  script.setAttribute("data-theme", "light");
+  script.setAttribute("data-position", "bottom-right");
+  document.body.appendChild(script);
+
+  showToast("Widget cargado — mira la esquina inferior derecha");
 }
 
 // ============================================================
