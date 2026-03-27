@@ -37,7 +37,7 @@ export async function handleChat(
   if (!tutor.isActive) throw new Error("Tutor is inactive");
 
   // 2. Search relevant chunks
-  const chunks = await searchChunks(tutorId, userMessage, 5);
+  const chunks = await searchChunks(tutorId, userMessage, 10);
 
   const docsUsed = chunks.map((c) => ({
     documentId: c.documentId,
