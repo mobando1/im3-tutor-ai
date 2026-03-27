@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
+import http from "http";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 import { eq, desc, sql, count } from "drizzle-orm";
@@ -494,8 +495,15 @@ async function start(): Promise<void> {
     await initializeDatabase();
     log("Database initialized (pg_trgm extension ready)");
 
-    app.listen(PORT, "0.0.0.0", () => {
+    // Create HTTP server and attach WebSocket
+    const server = http.createServer(app);
+
+    const { initWebSocket } = await import("./websocket.js");
+    initWebSocket(server);
+
+    server.listen(PORT, "0.0.0.0", () => {
       log(`IM3 Tutor server running on port ${PORT}`);
+      log("WebSocket ready at ws://localhost:" + PORT + "/ws/tutor");
     });
   } catch (err) {
     console.error("Failed to start server:", err);
