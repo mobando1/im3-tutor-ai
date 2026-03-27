@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IM3 Tutor — Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 36px; height: 36px; background: #2FA4A9; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+    .header-status {
+      display: flex; align-items: center; gap: 6px; font-size: 13px; color: #94a3b8;
+    }
+    .header-dot {
+      width: 8px; height: 8px; background: #10b981; border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .btn-logout {
+      background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px;
+      border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* Login screen */
+    .login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .login-box {
+      background: #1e293b; border-radius: 16px; padding: 40px;
+      max-width: 400px; width: 100%; text-align: center;
+    }
+    .login-box .logo { font-size: 48px; margin-bottom: 16px; }
+    .login-box h2 { font-size: 22px; margin-bottom: 8px; color: #fff; }
+    .login-box p { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+    .login-box input {
+      width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; color: #e2e8f0; font-size: 14px; margin-bottom: 16px; outline: none;
+    }
+    .login-box input:focus { border-color: #2FA4A9; }
+    .login-box .error { color: #ef4444; font-size: 13px; margin-bottom: 12px; display: none; }
+
+    /* Main layout */
+    .main { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+    /* Action bar */
+    .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .action-bar h2 { font-size: 20px; color: #fff; }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-primary { background: #2FA4A9; color: #fff; }
+    .btn-primary:hover { background: #268a8e; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-secondary:hover { background: #3f5174; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-copy { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+    .btn-copy:hover { border-color: #2FA4A9; color: #2FA4A9; }
+
+    /* Cards */
+    .tutor-card {
+      background: #1e293b; border-radius: 12px; padding: 20px;
+      margin-bottom: 16px; border: 1px solid #334155;
+    }
+    .tutor-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;
+    }
+    .tutor-name { font-size: 16px; font-weight: 600; color: #fff; }
+    .tutor-client { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+    .tutor-meta { display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+    .tutor-badge {
+      font-size: 12px; padding: 4px 10px; border-radius: 12px;
+      background: #0f172a; color: #94a3b8;
+    }
+    .tutor-badge.active { background: #064e3b; color: #10b981; }
+    .tutor-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Snippet */
+    .snippet-box {
+      background: #0f172a; border-radius: 8px; padding: 12px; margin-top: 12px;
+      position: relative;
+    }
+    .snippet-code {
+      font-family: monospace; font-size: 12px; color: #a5f3fc;
+      white-space: pre-wrap; word-break: break-all; line-height: 1.6;
+    }
+    .snippet-copy {
+      position: absolute; top: 8px; right: 8px;
+    }
+
+    /* Documents section */
+    .docs-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155; }
+    .docs-title { font-size: 13px; color: #2FA4A9; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .doc-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; background: #0f172a; border-radius: 6px; margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .doc-item-name { color: #e2e8f0; }
+    .doc-item-chunks { color: #64748b; font-size: 12px; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.6); z-index: 1000;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1e293b; border-radius: 16px; padding: 28px;
+      max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 18px; color: #fff; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; font-weight: 500;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; color: #e2e8f0; font-size: 14px; font-family: inherit; outline: none;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #2FA4A9;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group select { appearance: none; cursor: pointer; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    /* Upload area */
+    .upload-area {
+      border: 2px dashed #334155; border-radius: 8px; padding: 24px;
+      text-align: center; cursor: pointer; transition: border-color .2s;
+    }
+    .upload-area:hover { border-color: #2FA4A9; }
+    .upload-area p { color: #94a3b8; font-size: 14px; }
+    .upload-area .hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .upload-area input { display: none; }
+    .upload-progress { margin-top: 12px; font-size: 13px; color: #2FA4A9; display: none; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 60px 24px; color: #64748b;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 15px; margin-bottom: 20px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: #10b981;
+      color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px;
+      z-index: 2000; display: none; animation: slideIn .3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="logo">🎓</div>
+    <h2>IM3 Tutor</h2>
+    <p>Panel de administracion</p>
+    <div id="login-error" class="error">API key incorrecta</div>
+    <input type="password" id="api-key-input" placeholder="Admin API Key" autofocus>
+    <button class="btn btn-primary" style="width:100%" onclick="login()">Ingresar</button>
+  </div>
+</div>
+
+<!-- Admin Panel -->
+<div id="admin-panel" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">🎓</div>
+      <div>
+        <h1>IM3 Tutor</h1>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="header-status"><span class="header-dot"></span> API activa</div>
+      <button class="btn-logout" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="action-bar">
+      <h2>Tutores</h2>
+      <button class="btn btn-primary" onclick="openCreateModal()">+ Nuevo Tutor</button>
+    </div>
+    <div id="tutors-list"></div>
+  </div>
+</div>
+
+<!-- Create/Edit Tutor Modal -->
+<div id="tutor-modal" class="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Nuevo Tutor</h3>
+    <input type="hidden" id="edit-tutor-id">
+    <div class="form-group">
+      <label>Nombre del Proyecto *</label>
+      <input type="text" id="f-projectName" placeholder="Ej: Passport2Fluency">
+    </div>
+    <div class="form-group">
+      <label>Nombre del Cliente *</label>
+      <input type="text" id="f-clientName" placeholder="Ej: Sebastian Garzon">
+    </div>
+    <div class="form-group">
+      <label>Mensaje de Bienvenida</label>
+      <textarea id="f-welcomeMessage" placeholder="Hola, soy tu tutor virtual..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Instrucciones del Sistema (System Prompt)</label>
+      <textarea id="f-systemPrompt" placeholder="Instrucciones especificas para el comportamiento del tutor..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tema</label>
+        <select id="f-theme"><option value="light">Light</option><option value="dark">Dark</option></select>
+      </div>
+      <div class="form-group">
+        <label>Idioma</label>
+        <select id="f-language"><option value="es">Espanol</option><option value="en">English</option></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Color de Acento</label>
+      <input type="color" id="f-accentColor" value="#2FA4A9" style="height:40px;padding:4px">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('tutor-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveTutor()">Crear Tutor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div id="upload-modal" class="modal-overlay">
+  <div class="modal">
+    <h3>Subir Documento</h3>
+    <input type="hidden" id="upload-tutor-id">
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <p>Haz clic para seleccionar un archivo</p>
+      <p class="hint">PDF o archivo de texto (max 20MB)</p>
+      <input type="file" id="file-input" accept=".pdf,.txt,.md" onchange="handleFileSelect(event)">
+    </div>
+    <div id="selected-file" style="margin-top:12px;font-size:13px;color:#94a3b8"></div>
+    <div id="upload-progress" class="upload-progress">Subiendo y procesando...</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('upload-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="upload-btn" onclick="uploadDocument()" disabled>Subir Documento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+const API_BASE = window.location.origin;
+let apiKey = "";
+let selectedFile = null;
+
+// ============================================================
+// Auth
+// ============================================================
+
+function login() {
+  const input = document.getElementById("api-key-input");
+  apiKey = input.value.trim();
+  if (!apiKey) return;
+
+  // Test the key by listing tutors
+  fetch(API_BASE + "/api/admin/tutors", {
+    headers: { "Authorization": "Bearer " + apiKey }
+  }).then(r => {
+    if (r.ok) {
+      sessionStorage.setItem("im3-admin-key", apiKey);
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("admin-panel").style.display = "block";
+      loadTutors();
+    } else {
+      document.getElementById("login-error").style.display = "block";
+    }
+  }).catch(() => {
+    document.getElementById("login-error").style.display = "block";
+  });
+}
+
+// Enter key to login
+document.getElementById("api-key-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") login();
+});
+
+// Auto-login if key saved in session
+(function() {
+  const saved = sessionStorage.getItem("im3-admin-key");
+  if (saved) {
+    apiKey = saved;
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("admin-panel").style.display = "block";
+    loadTutors();
+  }
+})();
+
+function logout() {
+  sessionStorage.removeItem("im3-admin-key");
+  apiKey = "";
+  document.getElementById("admin-panel").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+}
+
+// ============================================================
+// API helpers
+// ============================================================
+
+function apiFetch(path, options = {}) {
+  return fetch(API_BASE + path, {
+    ...options,
+    headers: {
+      "Authorization": "Bearer " + apiKey,
+      ...(options.headers || {})
+    }
+  });
+}
+
+// ============================================================
+// Load and render tutors
+// ============================================================
+
+async function loadTutors() {
+  try {
+    const res = await apiFetch("/api/admin/tutors");
+    const tutors = await res.json();
+    renderTutors(tutors);
+  } catch (err) {
+    showToast("Error cargando tutores", true);
+  }
+}
+
+function renderTutors(tutors) {
+  const container = document.getElementById("tutors-list");
+
+  if (tutors.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🎓</div><p>No hay tutores todavia. Crea tu primer tutor para comenzar.</p></div>';
+    return;
+  }
+
+  container.innerHTML = tutors.map(t => {
+    const snippet = '<script src="' + API_BASE + '/widget.js" data-tutor="' + t.id + '" data-theme="' + t.theme + '" data-position="bottom-right"></' + 'script>';
+
+    return '<div class="tutor-card" id="tutor-' + t.id + '">' +
+      '<div class="tutor-card-header">' +
+        '<div><div class="tutor-name">' + esc(t.projectName) + '</div>' +
+        '<div class="tutor-client">' + esc(t.clientName) + '</div></div>' +
+        '<div class="tutor-actions">' +
+          '<button class="btn btn-sm btn-secondary" onclick="openEditModal(\'' + t.id + '\')">Editar</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="deleteTutor(\'' + t.id + '\', \'' + esc(t.projectName) + '\')">Eliminar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tutor-meta">' +
+        '<span class="tutor-badge ' + (t.isActive ? 'active' : '') + '">' + (t.isActive ? 'Activo' : 'Inactivo') + '</span>' +
+        '<span class="tutor-badge">' + t.language.toUpperCase() + '</span>' +
+        '<span class="tutor-badge">' + t.theme + '</span>' +
+        '<span class="tutor-badge" style="background:' + t.accentColor + ';color:#fff">' + t.accentColor + '</span>' +
+      '</div>' +
+      '<div class="snippet-box">' +
+        '<div class="snippet-copy"><button class="btn btn-sm btn-copy" onclick="copySnippet(this, \'' + t.id + '\')">Copiar</button></div>' +
+        '<div class="snippet-code">' + esc(snippet) + '</div>' +
+      '</div>' +
+      '<div class="docs-section">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<div class="docs-title">Documentos</div>' +
+          '<button class="btn btn-sm btn-primary" onclick="openUploadModal(\'' + t.id + '\')">+ Subir</button>' +
+        '</div>' +
+        '<div id="docs-' + t.id + '">Cargando...</div>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+
+  // Load docs for each tutor
+  tutors.forEach(t => loadDocuments(t.id));
+}
+
+// ============================================================
+// Documents
+// ============================================================
+
+async function loadDocuments(tutorId) {
+  try {
+    const res = await apiFetch("/api/admin/tutors/" + tutorId);
+    const tutor = await res.json();
+    const docs = tutor.documents || [];
+    const container = document.getElementById("docs-" + tutorId);
+
+    if (docs.length === 0) {
+      container.innerHTML = '<p style="font-size:13px;color:#64748b;padding:8px 0">Sin documentos. Sube PDFs o textos para entrenar al tutor.</p>';
+      return;
+    }
+
+    container.innerHTML = docs.map(d => {
+      const chunks = Array.isArray(d.chunks) ? d.chunks.length : 0;
+      return '<div class="doc-item">' +
+        '<div><span class="doc-item-name">' + esc(d.name) + '</span> <span class="doc-item-chunks">(' + chunks + ' chunks)</span></div>' +
+        '<button class="btn btn-sm btn-danger" onclick="deleteDocument(\'' + tutorId + '\', \'' + d.id + '\', \'' + esc(d.name) + '\')">Eliminar</button>' +
+      '</div>';
+    }).join("");
+  } catch {
+    document.getElementById("docs-" + tutorId).innerHTML = '<p style="color:#ef4444;font-size:13px">Error cargando documentos</p>';
+  }
+}
+
+// ============================================================
+// Create / Edit Tutor
+// ============================================================
+
+function openCreateModal() {
+  document.getElementById("modal-title").textContent = "Nuevo Tutor";
+  document.getElementById("modal-save-btn").textContent = "Crear Tutor";
+  document.getElementById("edit-tutor-id").value = "";
+  document.getElementById("f-projectName").value = "";
+  document.getElementById("f-clientName").value = "";
+  document.getElementById("f-welcomeMessage").value = "";
+  document.getElementById("f-systemPrompt").value = "";
+  document.getElementById("f-theme").value = "light";
+  document.getElementById("f-language").value = "es";
+  document.getElementById("f-accentColor").value = "#2FA4A9";
+  document.getElementById("tutor-modal").classList.add("open");
+}
+
+async function openEditModal(id) {
+  const res = await apiFetch("/api/admin/tutors/" + id);
+  const t = await res.json();
+
+  document.getElementById("modal-title").textContent = "Editar Tutor";
+  document.getElementById("modal-save-btn").textContent = "Guardar Cambios";
+  document.getElementById("edit-tutor-id").value = t.id;
+  document.getElementById("f-projectName").value = t.projectName;
+  document.getElementById("f-clientName").value = t.clientName;
+  document.getElementById("f-welcomeMessage").value = t.welcomeMessage || "";
+  document.getElementById("f-systemPrompt").value = t.systemPrompt || "";
+  document.getElementById("f-theme").value = t.theme;
+  document.getElementById("f-language").value = t.language;
+  document.getElementById("f-accentColor").value = t.accentColor;
+  document.getElementById("tutor-modal").classList.add("open");
+}
+
+async function saveTutor() {
+  const id = document.getElementById("edit-tutor-id").value;
+  const data = {
+    projectName: document.getElementById("f-projectName").value.trim(),
+    clientName: document.getElementById("f-clientName").value.trim(),
+    welcomeMessage: document.getElementById("f-welcomeMessage").value.trim() || undefined,
+    systemPrompt: document.getElementById("f-systemPrompt").value.trim() || undefined,
+    theme: document.getElementById("f-theme").value,
+    language: document.getElementById("f-language").value,
+    accentColor: document.getElementById("f-accentColor").value,
+  };
+
+  if (!data.projectName || !data.clientName) {
+    showToast("Nombre del proyecto y cliente son requeridos", true);
+    return;
+  }
+
+  try {
+    const method = id ? "PATCH" : "POST";
+    const url = id ? "/api/admin/tutors/" + id : "/api/admin/tutors";
+    const res = await apiFetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Error");
+    }
+
+    closeModal("tutor-modal");
+    showToast(id ? "Tutor actualizado" : "Tutor creado");
+    loadTutors();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function deleteTutor(id, name) {
+  if (!confirm("Eliminar tutor \"" + name + "\"? Se borran todos sus documentos y conversaciones.")) return;
+
+  try {
+    await apiFetch("/api/admin/tutors/" + id, { method: "DELETE" });
+    showToast("Tutor eliminado");
+    loadTutors();
+  } catch {
+    showToast("Error eliminando tutor", true);
+  }
+}
+
+// ============================================================
+// Upload Document
+// ============================================================
+
+function openUploadModal(tutorId) {
+  document.getElementById("upload-tutor-id").value = tutorId;
+  document.getElementById("file-input").value = "";
+  document.getElementById("selected-file").textContent = "";
+  document.getElementById("upload-progress").style.display = "none";
+  document.getElementById("upload-btn").disabled = true;
+  selectedFile = null;
+  document.getElementById("upload-modal").classList.add("open");
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  selectedFile = file;
+  const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+  document.getElementById("selected-file").textContent = file.name + " (" + sizeMB + " MB)";
+  document.getElementById("upload-btn").disabled = false;
+}
+
+async function uploadDocument() {
+  if (!selectedFile) return;
+  const tutorId = document.getElementById("upload-tutor-id").value;
+  const progress = document.getElementById("upload-progress");
+  const btn = document.getElementById("upload-btn");
+
+  progress.style.display = "block";
+  btn.disabled = true;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    const res = await fetch(API_BASE + "/api/admin/tutors/" + tutorId + "/documents", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + apiKey },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Error");
+    }
+
+    const doc = await res.json();
+    closeModal("upload-modal");
+    showToast("Documento subido (" + (doc.chunkCount || 0) + " chunks)");
+    loadDocuments(tutorId);
+  } catch (err) {
+    showToast(err.message, true);
+    progress.style.display = "none";
+    btn.disabled = false;
+  }
+}
+
+async function deleteDocument(tutorId, docId, name) {
+  if (!confirm("Eliminar documento \"" + name + "\"?")) return;
+
+  try {
+    await apiFetch("/api/admin/tutors/" + tutorId + "/documents/" + docId, { method: "DELETE" });
+    showToast("Documento eliminado");
+    loadDocuments(tutorId);
+  } catch {
+    showToast("Error eliminando documento", true);
+  }
+}
+
+// ============================================================
+// Snippet copy
+// ============================================================
+
+function copySnippet(btn, tutorId) {
+  const snippet = '<script src="' + API_BASE + '/widget.js" data-tutor="' + tutorId + '" data-theme="light" data-position="bottom-right"></' + 'script>';
+  navigator.clipboard.writeText(snippet).then(() => {
+    btn.textContent = "Copiado!";
+    setTimeout(() => btn.textContent = "Copiar", 2000);
+  });
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast" + (isError ? " error" : "");
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3000);
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Close modals on overlay click
+document.querySelectorAll(".modal-overlay").forEach(el => {
+  el.addEventListener("click", e => {
+    if (e.target === el) el.classList.remove("open");
+  });
+});
+</script>
+</body>
+</html>
