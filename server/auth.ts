@@ -16,9 +16,15 @@ export function adminAuth(
     return;
   }
 
-  const token = authHeader.slice(7);
+  const token = authHeader.slice(7).trim();
+  const expected = (process.env.ADMIN_API_KEY ?? "").trim();
 
-  if (token !== process.env.ADMIN_API_KEY) {
+  if (!expected) {
+    res.status(500).json({ error: "ADMIN_API_KEY not configured on server" });
+    return;
+  }
+
+  if (token !== expected) {
     res.status(403).json({ error: "Invalid API key" });
     return;
   }
