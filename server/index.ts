@@ -53,12 +53,26 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
 // Serve compiled widget as static file
+import { existsSync } from "fs";
+
 app.get("/widget.js", (_req, res) => {
-  const widgetPath = path.resolve(__dirname, "..", "dist", "widget.js");
-  res.setHeader("Content-Type", "application/javascript");
-  res.setHeader("Cache-Control", "public, max-age=3600");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.sendFile(widgetPath);
+  const candidates = [
+    path.resolve(process.cwd(), "dist", "widget.js"),
+    path.resolve(__dirname, "..", "dist", "widget.js"),
+  ];
+
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      res.setHeader("Content-Type", "application/javascript");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.sendFile(p);
+      return;
+    }
+  }
+
+  log("Widget not found. Searched: " + candidates.join(", "));
+  res.status(404).send("// widget.js not found — run: npm run build:widget");
 });
 
 // Multer for file uploads (in-memory)
@@ -576,7 +590,11 @@ app.use("/api/admin", adminRouter);
 // ============================================================
 
 app.get("/", (_req, res) => {
-  const adminPath = path.resolve(__dirname, "public", "admin.html");
+  const candidates = [
+    path.resolve(process.cwd(), "server", "public", "admin.html"),
+    path.resolve(__dirname, "public", "admin.html"),
+  ];
+  const adminPath = candidates.find((p) => existsSync(p)) ?? candidates[0]!;
   res.sendFile(adminPath);
 });
 
